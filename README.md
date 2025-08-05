@@ -315,12 +315,5 @@ kb_health = knowledge_base.health_check()
 
 Set `DEBUG=True` in `.env` for detailed logging.
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch
-3. Add tests for new functionality  
-4. Ensure all guardrails pass
-5. Submit pull request
 
 
