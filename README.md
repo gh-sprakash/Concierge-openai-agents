@@ -1,4 +1,4 @@
-# 🚀 Sales Assistant Agents
+# 🚀 Sales Assistant Agents - OpenAI Agents
 
 A comprehensive multi-agent sales assistant system built with OpenAI Agents SDK and AWS Bedrock integration. Features advanced security guardrails, persistent session management, and real-time business data integration.
 
