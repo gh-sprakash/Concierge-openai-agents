@@ -324,4 +324,3 @@ Set `DEBUG=True` in `.env` for detailed logging.
 5. Submit pull request
 
 
-🚀 **Revolutionize your sales operations with AI agents!** 🚀
