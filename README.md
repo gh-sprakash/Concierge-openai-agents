@@ -71,8 +71,6 @@ sales-assistant-agents/
   application in the examples folder.
 
 
-## 🚀 Quick Start
-
 ### 1. Installation
 
 ```bash
