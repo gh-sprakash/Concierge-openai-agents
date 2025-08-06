@@ -19,11 +19,11 @@ The `ai-agents-implementation/` folder contains detailed implementation guides:
 | Notebook | Key Implementation |
 |----------|-------------------|
 | `01_Environment_Setup_Dependencies.ipynb` | Multi-provider setup (OpenAI + Bedrock), model configurations, connection testing |
-| `02_Session_Memory_Management_FIXED.ipynb` | Persistent memory with OpenAI Agents SDK, multi-user session isolation |
-| `03_Agent_Creation_Tools_BEDROCK.ipynb` | Unified OpenAI+Bedrock interface, business tool integration, multi-provider orchestration |
+| `02_Session_Memory_Management.ipynb` | Persistent memory with OpenAI Agents SDK, multi-user session isolation |
+| `03_Agent_Creation_Tools.ipynb` | Unified OpenAI+Bedrock interface, business tool integration, multi-provider orchestration |
 | `04_Advanced_Agent_Patterns.ipynb` | Parallel execution patterns, sequential workflows, structured outputs with Pydantic |
 | `06_Guardrails_Simple.ipynb` | Input/output guardrails, production safety patterns, PII protection |
-| `07_Streaming_Guardrails_Multi_Model_FIXED.ipynb` | Real-time streaming safety, multi-model guardrails, early termination |
+| `07_Streaming_Guardrails_Multi_Model.ipynb` | Real-time streaming safety, multi-model guardrails, early termination |
 
 ## 📁 Project Structure
 
