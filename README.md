@@ -30,6 +30,84 @@ sales-assistant-agents/
     └── streamlit_app.py    # Complete web interface
 ```
 
+🚀 Sales Assistant Agents - OpenAI Agents
+
+  A comprehensive multi-agent sales assistant system built with OpenAI Agents SDK and AWS Bedrock integration.
+  Features advanced security guardrails, persistent session management, and real-time business data integration.
+
+  🎯 Key Features
+
+  ✅ Agents as Tools: Parallel data source access with intelligent orchestration✅ Security Guardrails: PII
+  protection and content filtering✅ Multi-Model Support: OpenAI GPT-4o + Bedrock Claude models✅ Session 
+  Management: Persistent conversation history with SQLite✅ Real Data Sources: Salesforce, Veeva, Tableau, Knowledge
+   Base integration✅ Streaming Responses: Real-time response generation with safety monitoring✅ Production Ready:
+  Complete Streamlit web interface
+
+  📚 Implementation Notebooks
+
+  The ai-agents-implementation/ folder contains detailed implementation guides:
+
+  | Notebook                                        | Key Implementation
+                              |
+  |-------------------------------------------------|---------------------------------------------------------------
+  ----------------------------|
+  | 01_Environment_Setup_Dependencies.ipynb         | Multi-provider setup (OpenAI + Bedrock), model configurations,
+   connection testing         |
+  | 02_Session_Memory_Management_FIXED.ipynb        | Persistent memory with OpenAI Agents SDK, multi-user session
+  isolation                    |
+  | 03_Agent_Creation_Tools_BEDROCK.ipynb           | Unified OpenAI+Bedrock interface, business tool integration,
+  multi-provider orchestration |
+  | 04_Advanced_Agent_Patterns.ipynb                | Parallel execution patterns, sequential workflows, structured
+  outputs with Pydantic       |
+  | 06_Guardrails_Simple.ipynb                      | Input/output guardrails, production safety patterns, PII
+  protection                       |
+  | 07_Streaming_Guardrails_Multi_Model_FIXED.ipynb | Real-time streaming safety, multi-model guardrails, early
+  termination                     |
+
+  📁 Project Structure
+
+  sales-assistant-agents/
+  ├── ai-agents-implementation/    # 📚 Implementation notebooks (START HERE)
+  │   ├── 01_Environment_Setup_Dependencies.ipynb
+  │   ├── 02_Session_Memory_Management_FIXED.ipynb
+  │   ├── 03_Agent_Creation_Tools_BEDROCK.ipynb
+  │   ├── 04_Advanced_Agent_Patterns.ipynb
+  │   ├── 06_Guardrails_Simple.ipynb
+  │   └── 07_Streaming_Guardrails_Multi_Model_FIXED.ipynb
+  ├── requirements.txt             # Python dependencies
+  ├── .env.example                # Environment configuration template
+  ├── src/                        # Core application source
+  │   ├── models/                 # Model configurations (OpenAI + Claude)
+  │   ├── agents/                 # Agent tools and orchestrator
+  │   ├── guardrails/            # Security and PII protection
+  │   ├── sessions/              # Conversation memory management
+  │   ├── data/                  # Mock data sources (Salesforce, Veeva, Tableau)
+  │   ├── knowledge/             # AWS Bedrock Knowledge Base integration
+  │   └── utils/                 # Streaming and utility functions
+  └── examples/
+      └── streamlit_app.py       # Complete web interface
+
+  🚀 Quick Start
+
+  1. Review Implementation: Start with the notebooks in ai-agents-implementation/ to understand the architecture
+  2. Install Dependencies: pip install -r requirements.txt
+  3. Configure Environment: Copy .env.example to .env and add your API keys
+  4. Run Application: streamlit run examples/streamlit_app.py
+
+  🔧 Core Technologies
+
+  - OpenAI Agents SDK: Memory management and agent orchestration
+  - AWS Bedrock: Claude models via LiteLLM integration
+  - Streamlit: Production web interface
+  - SQLite: Persistent session storage
+  - Pydantic: Type-safe data models
+  - AsyncIO: Parallel processing and streaming
+
+  ---
+  Start with the implementation notebooks to understand how each component was built, then explore the production 
+  application in the examples folder.
+
+
 ## 🚀 Quick Start
 
 ### 1. Installation
