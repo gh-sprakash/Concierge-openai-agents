@@ -1,5 +1,5 @@
 # Core Dependencies
-openai-agents>=1.0.0
+openai-agents ## 0.2.4 Is the latest one as checked on August 7
 streamlit>=1.28.0
 pydantic>=2.0.0
 python-dotenv>=1.0.0
