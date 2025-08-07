@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Environment files (will be provided separately in EC2)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Sessions (will be created in container)
+sessions/*.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+README.md
+*.md
+!CLAUDE.md
+
+# Jupyter notebooks
+*.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml

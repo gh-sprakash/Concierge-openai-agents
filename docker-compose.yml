@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  sales-assistant:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      # These should be set via environment variables or .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION_NAME=${AWS_REGION_NAME:-us-west-2}
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+    volumes:
+      # Mount sessions directory to persist SQLite databases
+      - ./sessions:/app/sessions
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

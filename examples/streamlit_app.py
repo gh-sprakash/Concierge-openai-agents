@@ -168,7 +168,7 @@ class SalesAssistantApp:
                     asyncio.run(session_manager.clear_session(st.session_state.user_id, session_type))
                     st.session_state.chat_history = []
                     st.success("✅ Cleared!")
-                    st.experimental_rerun()
+                    st.rerun()
             
             with col2:
                 if st.button("📊 Reset Metrics"):
@@ -177,7 +177,7 @@ class SalesAssistantApp:
                         'guardrail_blocks': 0, 'total_time': 0.0
                     }
                     st.success("✅ Reset!")
-                    st.experimental_rerun()
+                    st.rerun()
             
             # Metrics display
             self.render_metrics()
@@ -450,11 +450,10 @@ class SalesAssistantApp:
                     st.session_state.chat_history.append({
                         'role': 'error', 
                         'content': error_msg,
-                        'timestamp': datetime.now().isoformat()
-                    })
+                        'timestamp': datetime.now().isoformat()                        })
         
         # Rerun to update the interface
-        st.experimental_rerun()
+        st.rerun()
     
     def run(self):
         """Main application runner"""
