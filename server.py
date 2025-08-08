@@ -49,7 +49,21 @@ def create_app() -> Flask:
 
     @app.post("/query")
     def query():
-        data: Dict[str, Any] = request.get_json(silent=True) or {}
+        ## get post query parameters
+        # print('-----query endpoint called-----')
+        # print('-----request headers:', request.headers)
+        # print('-----request args:', request.args)
+        # print('-----request form:', request.form)
+        # print('-----request json:', request.json)
+        # print('-----request data:', request.data)
+        # print('-----request content type:', request.content_type)
+
+        # print('complete request:', request)
+        # print(' request data:', request.get_data())
+        # data: Dict[str, Any] = request.get_json(silent=True) or {}
+        ## either data is in request.args or request.json
+        data: Dict[str, Any] = request.args.to_dict() or request.json or {}
+        print('-----data:', data)
         user_query: str = (data.get("question") or data.get("prompt") or "").strip()
         if not user_query:
             return jsonify({"success": False, "error": "Missing 'query'"}), 400
