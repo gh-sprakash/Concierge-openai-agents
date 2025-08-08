@@ -50,7 +50,7 @@ def create_app() -> Flask:
     @app.post("/query")
     def query():
         data: Dict[str, Any] = request.get_json(silent=True) or {}
-        user_query: str = (data.get("prompt") or data.get("q") or "").strip()
+        user_query: str = (data.get("question") or data.get("prompt") or "").strip()
         if not user_query:
             return jsonify({"success": False, "error": "Missing 'query'"}), 400
 
