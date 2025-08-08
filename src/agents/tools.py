@@ -34,6 +34,11 @@ class EngagementInfo(BaseModel):
     contacts_made: List[Dict[str, Any]]
 
 
+# Structured KB result with sources for citations
+class KnowledgeResult(BaseModel):
+    text: str
+    sources: List[Dict[str, Any]] = []
+
 # Context class for sharing data between tools
 class SalesContext:
     """Sales context shared across all tools"""
@@ -116,7 +121,7 @@ async def query_veeva_tool(
 async def query_knowledge_tool(
     ctx: RunContextWrapper[SalesContext],
     query: str
-) -> str:
+) -> KnowledgeResult:
     """
     🔧 Knowledge Base Tool: Product information and training materials
     
@@ -135,9 +140,9 @@ async def query_knowledge_tool(
     """
     print(f"🔧 Knowledge Base Tool Called: query={query}")
     
-    # Query the knowledge base
-    result = knowledge_base.query(query)
-    return result
+    # Query the knowledge base (answer + sources)
+    kb = knowledge_base.query_with_sources(query)
+    return KnowledgeResult(text=kb.get("text", ""), sources=kb.get("sources", []))
 
 
 @function_tool
@@ -243,5 +248,6 @@ __all__ = [
     'query_compliance_tool',
     'SalesContext',
     'OrderInfo',
-    'EngagementInfo'
+    'EngagementInfo',
+    'KnowledgeResult'
 ]

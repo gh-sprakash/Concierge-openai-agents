@@ -19,6 +19,7 @@ from .tools import (
 from ..guardrails.security import strict_security_guardrail
 from ..models.config import get_model_config, get_model_settings
 from ..sessions.manager import SessionManager
+from ..knowledge.bedrock_kb import knowledge_base
 
 
 class SalesOrchestrator:
@@ -167,6 +168,26 @@ class SalesOrchestrator:
             # Extract tool usage information
             tools_used = self._extract_tools_used(result)
             
+            # If the knowledge base tool was used, attempt to extract sources from agent result items
+            kb_sources = []
+            # Try to extract sources from tool outputs if present
+            try:
+                for item in result.new_items:
+                    payload = getattr(item, 'content', None) or getattr(item, 'data', None) or getattr(item, 'value', None)
+                    if isinstance(payload, dict):
+                        sources = payload.get('sources') or []
+                        if sources:
+                            kb_sources.extend(sources)
+            except Exception:
+                pass
+            # Always attempt a direct KB lookup to provide sources when available
+            if not kb_sources:
+                try:
+                    kb = knowledge_base.query_with_sources(query)
+                    kb_sources = kb.get('sources', [])
+                except Exception:
+                    kb_sources = []
+
             return {
                 "success": True,
                 "response": result.final_output,
@@ -174,6 +195,7 @@ class SalesOrchestrator:
                 "execution_time": end_time - start_time,
                 "model": self.model_config.display_name,
                 "session_used": session is not None,
+                "knowledge_sources": kb_sources,
                 "result_object": result  # Full result object for advanced usage
             }
             

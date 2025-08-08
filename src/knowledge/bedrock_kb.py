@@ -98,6 +98,101 @@ class BedrockKnowledgeBase:
         """
         if not self.available or not self.client:
             return self._get_mock_response(query)
+
+    def query_with_sources(self, query: str) -> Dict[str, Any]:
+        """
+        Query the Knowledge Base and return both answer text and source documents when available.
+
+        Returns a dict: { 'text': str, 'sources': List[Dict[str, Any]] }
+        """
+        # Fallback to mock if KB is unavailable
+        if not self.available or not self.client:
+            return {
+                "text": self._get_mock_response(query),
+                "sources": self._get_mock_sources(query)
+            }
+
+        try:
+            response = self.client.retrieve_and_generate(
+                input={'text': query},
+                retrieveAndGenerateConfiguration={
+                    'type': 'KNOWLEDGE_BASE',
+                    'knowledgeBaseConfiguration': {
+                        'knowledgeBaseId': self.knowledge_base_id,
+                        'modelArn': self.model_arn,
+                    }
+                }
+            )
+
+            text = response.get('output', {}).get('text', '')
+            sources = self._extract_sources(response)
+            return {"text": text, "sources": sources}
+
+        except Exception as e:
+            print(f"❌ Knowledge Base query_with_sources failed: {e}")
+            return {
+                "text": self._get_mock_response(query),
+                "sources": self._get_mock_sources(query)
+            }
+
+    def _extract_sources(self, response: Dict[str, Any]):
+        """Best-effort extraction of source documents from Bedrock RnG response."""
+        sources: list[Dict[str, Any]] = []
+        try:
+            citations = response.get('citations') or []
+            for citation in citations:
+                refs = citation.get('retrievedReferences') or []
+                for ref in refs:
+                    source: Dict[str, Any] = {}
+                    # Location info (varies by connector)
+                    location = ref.get('location') or {}
+                    if 's3Location' in location:
+                        s3 = location['s3Location']
+                        bucket = s3.get('bucket')
+                        key = s3.get('key')
+                        source['uri'] = f"s3://{bucket}/{key}" if bucket and key else None
+                    elif 'kendraDocumentId' in location:
+                        source['kendraDocumentId'] = location.get('kendraDocumentId')
+                    elif 'url' in location:
+                        source['uri'] = location.get('url')
+
+                    # Content/snippet if present
+                    content = ref.get('content')
+                    if isinstance(content, dict):
+                        # Newer payloads may use text within a dict
+                        source['snippet'] = content.get('text') or content.get('body')
+                        source['title'] = content.get('title')
+                    elif isinstance(content, str):
+                        source['snippet'] = content
+
+                    # Metadata
+                    metadata = ref.get('metadata') or {}
+                    if metadata:
+                        source['metadata'] = metadata
+
+                    # Clean Nones
+                    source = {k: v for k, v in source.items() if v is not None}
+                    if source:
+                        sources.append(source)
+
+        except Exception as e:
+            print(f"⚠️ Failed to extract sources: {e}")
+        return sources
+
+    def _get_mock_sources(self, query: str):
+        """Provide mock source documents for local/dev usage."""
+        return [
+            {
+                "title": "Mock KB: Product Overview",
+                "uri": "s3://mock-bucket/knowledge/product-overview.md",
+                "snippet": f"Auto-generated reference for '{query}' (overview)",
+            },
+            {
+                "title": "Mock KB: Clinical Study Summary",
+                "uri": "s3://mock-bucket/knowledge/clinical-study.pdf",
+                "snippet": f"Auto-generated reference for '{query}' (clinical)",
+            },
+        ]
         
         try:
             response = self.client.retrieve_and_generate(
