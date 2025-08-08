@@ -77,6 +77,12 @@ sales-assistant-agents/
 # Clone or create the project directory
 cd sales-assistant-agents
 
+# In case you are on a server. Run the following command only the first time. 
+python -m venv ~/.agents
+
+# In case you are on a server.
+source ~/.agents/bin/activate
+
 # Install dependencies
 pip install -r requirements.txt
 ```
