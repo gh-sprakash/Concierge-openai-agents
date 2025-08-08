@@ -118,11 +118,11 @@ class SalesOrchestrator:
             🎯 **MISSION**: Help sales representatives make data-driven decisions and build stronger customer relationships.
             """,
             tools=[
-                query_salesforce_tool,
-                query_veeva_tool,
+                # query_salesforce_tool,
+                # query_veeva_tool,
                 query_knowledge_tool,
-                query_tableau_tool,
-                query_compliance_tool
+                # query_tableau_tool,
+                # query_compliance_tool
             ],
             input_guardrails=guardrails,
             model=self.model_config.model_id,

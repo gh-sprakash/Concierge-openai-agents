@@ -26,12 +26,12 @@ def create_app() -> Flask:
     CORS(app)
 
     # Fixed configuration per requirements
-    MODEL_NAME = "openai-gpt-4o"  # use GPT-4o
+    MODEL_NAME = "openai-gpt-4o-mini"  # use GPT-4o
     SESSION_TYPE = "persistent"   # persistent memory
 
     orchestrator = SalesOrchestrator(
         model_name=MODEL_NAME,
-        enable_guardrails=True,
+        enable_guardrails=False,
         enable_tracing=False,
     )
 
