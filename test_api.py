@@ -142,8 +142,8 @@ def query_api(user_id, query, user_context=None):
     url = f"{host}/query"
     headers = {"Content-Type": "application/json"}
     body = {
-        "user_id": user_id,
-        "query": query,
+        "user": user_id,
+        "prompt": query,
         "user_context": user_context or {}
     }
     

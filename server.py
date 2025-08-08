@@ -50,11 +50,11 @@ def create_app() -> Flask:
     @app.post("/query")
     def query():
         data: Dict[str, Any] = request.get_json(silent=True) or {}
-        user_query: str = (data.get("query") or data.get("q") or "").strip()
+        user_query: str = (data.get("prompt") or data.get("q") or "").strip()
         if not user_query:
             return jsonify({"success": False, "error": "Missing 'query'"}), 400
 
-        user_id: str = data.get("user_id") or request.headers.get("X-User-Id") or "anon"
+        user_id: str = data.get("user") or request.headers.get("X-User-Id") or "anon"
         # Always persistent per requirement
         session = session_manager.get_session(user_id=user_id, session_type=SESSION_TYPE)
 
@@ -83,7 +83,10 @@ def create_app() -> Flask:
 
             status_code = 200 if result.get("success") else 400
             # Shape the API to return response and knowledge sources if present
+            ## generate unique query ID
+            query_id = str(uuid.uuid4())
             payload = {
+                "queryId": query_id,
                 "success": result.get("success", False),
                 "response": result.get("response"),
                 "model": result.get("model"),
