@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from src.agents.orchestrator import SalesOrchestrator
 from src.sessions.manager import session_manager
+from utils_kb_references import get_references_dict_from_knowledge_sources
 
 
 def create_app() -> Flask:
@@ -70,6 +71,15 @@ def create_app() -> Flask:
                 user_context=user_context,
                 session=session,
             ))
+            knowledge_sources = result.get("knowledge_sources", [])
+            # print(f"Knowledge sources: {knowledge_sources}")
+            try:
+                references_dict = get_references_dict_from_knowledge_sources(
+                    knowledge_sources
+                )
+            except Exception as e:
+                print(f"Error getting references: {e}")
+                references_dict = []
 
             status_code = 200 if result.get("success") else 400
             # Shape the API to return response and knowledge sources if present
@@ -80,7 +90,7 @@ def create_app() -> Flask:
                 "tools_used": result.get("tools_used", []),
                 "execution_time": result.get("execution_time"),
                 "session_type": SESSION_TYPE,
-                "knowledge_sources": result.get("knowledge_sources", []),
+                "references_dict": references_dict
             }
             if not result.get("success"):
                 payload["error"] = result.get("error") or result.get("response")
@@ -101,6 +111,6 @@ app = create_app()
 if __name__ == "__main__":
     # Bind to 0.0.0.0 for container/EC2 usage; PORT env var respected
     port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)
 
 
