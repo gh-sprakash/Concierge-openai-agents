@@ -60,7 +60,7 @@ class StreamingResponseProcessor:
                 yield chunk_buffer
                 
         except Exception as e:
-            yield f"❌ **Streaming Error**: {str(e)}"
+            yield f"STREAMING ERROR: {str(e)}"
     
     def format_response_chunk(self, chunk: str) -> str:
         """Format response chunks for display"""

@@ -56,7 +56,7 @@ async def query_salesforce_tool(
     doctor_name: Optional[str] = None
 ) -> OrderInfo:
     """
-    🔧 Salesforce Tool: Query doctor orders and compliance information
+    Salesforce Tool: Query doctor orders and compliance information
     
     This tool retrieves order information from Salesforce CRM, including:
     - Order history and status
@@ -70,7 +70,7 @@ async def query_salesforce_tool(
     Returns:
         OrderInfo: Structured order and compliance information
     """
-    print(f"🔧 Salesforce Tool Called: doctor={doctor_name}")
+    print(f"INFO: Salesforce Tool Called: doctor={doctor_name}")
     
     # Get order summary from data source
     order_summary = salesforce_data.get_order_summary(doctor_name)
@@ -90,7 +90,7 @@ async def query_veeva_tool(
     doctor_name: str
 ) -> EngagementInfo:
     """
-    🔧 Veeva Tool: Query healthcare professional engagement data
+    Veeva Tool: Query healthcare professional engagement data
     
     This tool retrieves engagement information from Veeva CRM, including:
     - Latest engagement activities
@@ -104,7 +104,7 @@ async def query_veeva_tool(
     Returns:
         EngagementInfo: Structured engagement and contact information
     """
-    print(f"🔧 Veeva Tool Called: doctor={doctor_name}")
+    print(f"INFO: Veeva Tool Called: doctor={doctor_name}")
     
     # Get latest engagement info from data source
     engagement_info = veeva_data.get_latest_engagement(doctor_name)
@@ -125,7 +125,7 @@ async def query_knowledge_tool(
     query: str
 ) -> KnowledgeResult:
     """
-    🔧 Knowledge Base Tool: Product information and training materials
+    Knowledge Base Tool: Product information and training materials
     
     This tool retrieves relevant document chunks from the AWS Bedrock Knowledge Base for:
     - Product features and specifications
@@ -140,7 +140,7 @@ async def query_knowledge_tool(
     Returns:
         KnowledgeResult: Raw document chunks and sources for the main agent to process
     """
-    print(f"🔧 Knowledge Base Tool Called: query={query}")
+    print(f"INFO: Knowledge Base Tool Called: query={query}")
     
     # Retrieve document chunks directly (no generation)
     kb_result = knowledge_base.retrieve_documents(query)
@@ -158,7 +158,7 @@ async def query_tableau_tool(
     analysis_type: str = "trends"
 ) -> str:
     """
-    🔧 Tableau Tool: Analytics and business intelligence
+    Tableau Tool: Analytics and business intelligence
     
     This tool provides business analytics and insights from Tableau, including:
     - Test ordering trends and growth metrics
@@ -173,14 +173,14 @@ async def query_tableau_tool(
     Returns:
         str: Formatted analytics report
     """
-    print(f"🔧 Tableau Tool Called: type={analysis_type}")
+    print(f"INFO: Tableau Tool Called: type={analysis_type}")
     
     if analysis_type.lower() == "insights":
         insights = tableau_data.get_performance_insights()
         return "\n".join([f"• {insight}" for insight in insights])
     elif analysis_type.lower() == "regional":
         regions = tableau_data.get_regional_performance()
-        result = "🌎 Regional Performance Summary:\n\n"
+        result = "Regional Performance Summary:\n\n"
         for region in regions:
             result += f"**{region['region']}:**\n"
             result += f"• Orders: {region['total_orders']:,}\n"
@@ -199,7 +199,7 @@ async def query_compliance_tool(
     doctor_name: str
 ) -> str:
     """
-    🔧 Compliance Tool: Stark Law and regulatory compliance information
+    Compliance Tool: Stark Law and regulatory compliance information
     
     This tool provides compliance-related information including:
     - Stark Law spending limits and current status
@@ -212,7 +212,7 @@ async def query_compliance_tool(
     Returns:
         str: Formatted compliance information and recommendations
     """
-    print(f"🔧 Compliance Tool Called: doctor={doctor_name}")
+    print(f"INFO: Compliance Tool Called: doctor={doctor_name}")
     
     compliance_info = salesforce_data.get_compliance_info(doctor_name)
     
@@ -231,16 +231,16 @@ async def query_compliance_tool(
     
     # Add recommendations based on risk level
     if compliance['risk_level'] == "High":
-        result += "⚠️ **Recommendations:**\n"
+        result += "WARNING - Recommendations:\n"
         result += "• Monitor spending closely\n"
         result += "• Consider alternative engagement strategies\n"
         result += "• Consult compliance team before additional activities\n"
     elif compliance['risk_level'] == "Medium":
-        result += "📊 **Recommendations:**\n"
+        result += "Recommendations:\n"
         result += "• Regular monitoring recommended\n"
         result += "• Plan remaining activities carefully\n"
     else:
-        result += "✅ **Status:**\n"
+        result += "Status:\n"
         result += "• Compliance status is healthy\n"
         result += "• Continue with planned activities\n"
     

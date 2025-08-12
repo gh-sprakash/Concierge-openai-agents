@@ -61,7 +61,7 @@ class SalesOrchestrator:
         # Initialize the orchestrator agent
         self.agent = self._create_orchestrator_agent()
         
-        print(f"🤖 Sales Orchestrator initialized with {self.model_config.display_name}")
+        print(f"INFO: Sales Orchestrator initialized with {self.model_config.display_name}")
     
     def _create_orchestrator_agent(self) -> Agent:
         """Create the main orchestrator agent with all tools"""
@@ -74,29 +74,29 @@ class SalesOrchestrator:
         agent = Agent(
             name="Sales Assistant Orchestrator",
             instructions="""
-            🎯 **You are a comprehensive sales assistant with access to all enterprise data sources.**
+            You are a comprehensive sales assistant with access to all enterprise data sources.
             
-            🔧 **AVAILABLE TOOLS & USAGE:**
+            **AVAILABLE TOOLS & USAGE:**
             
             **query_knowledge_tool**: Product information, training materials, clinical data
             • Use for: "Guardant360 features", "Product specifications", "Clinical studies"
             • Returns: Raw document chunks from knowledge base that you should synthesize into a comprehensive response
             • IMPORTANT: When this tool returns document chunks, analyze and synthesize them into a coherent, helpful response
             
-            ✅ **RESPONSE GUIDELINES:**
+            **RESPONSE GUIDELINES:**
             • Provide specific, actionable insights
             • Reference actual data from tools
             • Be professional and business-focused
             • Format responses clearly with bullet points and sections
             • Always mention which data sources were consulted
             
-            ❌ **RESTRICTIONS:**
+            **RESTRICTIONS:**
             • Never share personal contact information (phone, email, SSN)
             • Don't attempt math calculations or tell jokes
             • Stay focused on legitimate business inquiries
             • Don't guess - use tools to get accurate data
             
-            🎯 **MISSION**: Help sales representatives make data-driven decisions and build stronger customer relationships.
+            **MISSION**: Help sales representatives make data-driven decisions and build stronger customer relationships.
 
             VERY VERY IMPORTANT -: Don't send Response as Markdown or HTML, just plain text. DONOT use bold elements or headings.
 
@@ -180,7 +180,7 @@ class SalesOrchestrator:
                             if sources:
                                 kb_sources.extend(sources)
             except Exception as e:
-                print(f"⚠️ Error extracting sources from tool results: {e}")
+                print(f"WARNING: Error extracting sources from tool results: {e}")
                 
             # Fallback: if no sources extracted from tool results, try direct KB lookup
             if not kb_sources:
@@ -206,7 +206,7 @@ class SalesOrchestrator:
             output_info = getattr(e, 'output_info', str(e))
             return {
                 "success": False,
-                "response": f"❌ **Error**: {str(e)}",
+                "response": f"ERROR: {str(e)}",
                 "error": output_info,
                 "execution_time": end_time - start_time,
                 "model": self.model_config.display_name
@@ -248,7 +248,7 @@ class SalesOrchestrator:
                     yield event.data.delta
                     
         except Exception as e:
-            yield f"❌ **Streaming Error**: {str(e)}"
+            yield f"STREAMING ERROR: {str(e)}"
     
     def _create_sales_context(self, user_context: Optional[Dict[str, Any]] = None) -> SalesContext:
         """Create sales context from user information"""
@@ -292,15 +292,15 @@ class SalesOrchestrator:
                             tool_name = 'query_compliance_tool'
                 
                 # Debug logging (can be enabled if needed)
-                # print(f"🔍 Item type: {type(item)}, tool_name: {tool_name}")
+                # print(f"DEBUG: Item type: {type(item)}, tool_name: {tool_name}")
                 # if hasattr(item, '__dict__'):
-                #     print(f"🔍 Item attributes: {list(item.__dict__.keys())}")
+                #     print(f"DEBUG: Item attributes: {list(item.__dict__.keys())}")
                 
                 if tool_name and tool_name not in tools_used:
                     tools_used.append(tool_name)
                     
         except Exception as e:
-            print(f"⚠️ Error extracting tools used: {e}")
+            print(f"WARNING: Error extracting tools used: {e}")
         
         return tools_used
     

@@ -1,6 +1,6 @@
 """
 AWS Bedrock Knowledge Base Integration
-Provides access to product information, training materials, and documentation
+Provides access to product information, training materials
 """
 
 import boto3
@@ -51,18 +51,18 @@ class BedrockKnowledgeBase:
             # Test connection with a simple query
             self._test_connection()
             self.available = True
-            print("✅ Bedrock Knowledge Base initialized successfully")
+            print("INFO: Bedrock Knowledge Base initialized successfully")
             
         except NoCredentialsError:
-            print("⚠️ AWS credentials not configured. Knowledge Base will use mock responses.")
+            print("WARNING: AWS credentials not configured. Knowledge Base will use mock responses.")
             self.available = False
             
         except ClientError as e:
-            print(f"⚠️ AWS Bedrock client error: {e}. Knowledge Base will use mock responses.")
+            print(f"WARNING: AWS Bedrock client error: {e}. Knowledge Base will use mock responses.")
             self.available = False
             
         except Exception as e:
-            print(f"⚠️ Failed to initialize Knowledge Base: {e}. Using mock responses.")
+            print(f"WARNING: Failed to initialize Knowledge Base: {e}. Using mock responses.")
             self.available = False
     
     def _test_connection(self) -> None:
@@ -84,7 +84,7 @@ class BedrockKnowledgeBase:
         if not test_response.get('retrievalResults'):
             raise Exception("Invalid response from Knowledge Base")
         
-        print("🧪 Knowledge Base connection test successful")
+        print("INFO: Knowledge Base connection test successful")
     
     def query(self, query: str) -> str:
         """
@@ -182,7 +182,7 @@ class BedrockKnowledgeBase:
             }
 
         except Exception as e:
-            print(f"❌ Knowledge Base retrieve_documents failed: {e}")
+            print(f"ERROR: Knowledge Base retrieve_documents failed: {e}")
             return {
                 "chunks": [self._get_mock_response(query)],
                 "sources": self._get_mock_sources(query)
@@ -247,7 +247,7 @@ class BedrockKnowledgeBase:
                         sources.append(source)
 
         except Exception as e:
-            print(f"⚠️ Failed to extract sources: {e}")
+            print(f"WARNING: Failed to extract sources: {e}")
         return sources
 
     def _get_mock_sources(self, query: str):
@@ -280,7 +280,7 @@ class BedrockKnowledgeBase:
             return response['output']['text']
             
         except Exception as e:
-            print(f"❌ Knowledge Base query failed: {e}")
+            print(f"ERROR: Knowledge Base query failed: {e}")
             return self._get_mock_response(query)
     
     def _get_mock_response(self, query: str) -> str:

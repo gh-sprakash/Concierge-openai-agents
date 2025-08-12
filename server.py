@@ -18,9 +18,9 @@ os.environ["OPENAI_AGENTS_DISABLE_TRACING"] = "1"
 try:
     from agents import set_tracing_disabled
     set_tracing_disabled(True)
-    print("✅ OpenAI Agents tracing disabled")
+    print("INFO: OpenAI Agents tracing disabled")
 except ImportError:
-    print("⚠️ Could not import set_tracing_disabled - tracing may still be enabled")
+    print("WARNING: Could not import set_tracing_disabled - tracing may still be enabled")
 
 # Ensure project root on sys.path (the script directory is already added by Python)
 import sys

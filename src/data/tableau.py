@@ -118,7 +118,7 @@ class TableauDataSource:
         """Get formatted analytics summary"""
         trends = self.data["test_ordering_trends"]
         
-        summary = "📊 Test Ordering Trends (January 2024):\n\n"
+        summary = "Test Ordering Trends (January 2024):\n\n"
         
         for trend in trends:
             summary += (
@@ -153,14 +153,14 @@ class TableauDataSource:
         
         # Product performance insights
         best_growth = max(trends, key=lambda x: float(x["growth"].replace("%", "").replace("+", "")))
-        insights.append(f"🚀 {best_growth['product']} shows strongest growth at {best_growth['growth']}")
+        insights.append(f"INFO: {best_growth['product']} shows strongest growth at {best_growth['growth']}")
         
         best_completion = max(trends, key=lambda x: x["completion_rate"])
-        insights.append(f"✅ {best_completion['product']} has highest completion rate at {best_completion['completion_rate']}%")
+        insights.append(f"INFO: {best_completion['product']} has highest completion rate at {best_completion['completion_rate']}%")
         
         # Regional insights
         best_region = max(regions, key=lambda x: x["revenue"])
-        insights.append(f"💰 {best_region['region']} leads in revenue with ${best_region['revenue']:,}")
+        insights.append(f"INFO: {best_region['region']} leads in revenue with ${best_region['revenue']:,}")
         
         return insights
 
