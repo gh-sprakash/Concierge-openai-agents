@@ -11,6 +11,17 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 load_dotenv()
 
+# Disable OpenAI Agents SDK tracing globally
+os.environ["OPENAI_AGENTS_DISABLE_TRACING"] = "1"
+
+# Try to import and disable tracing if available
+try:
+    from agents import set_tracing_disabled
+    set_tracing_disabled(True)
+    print("✅ OpenAI Agents tracing disabled")
+except ImportError:
+    print("⚠️ Could not import set_tracing_disabled - tracing may still be enabled")
+
 # Ensure project root on sys.path (the script directory is already added by Python)
 import sys
 sys.path.insert(0, os.path.dirname(__file__))

@@ -63,11 +63,19 @@ def get_references_dict(parsed_refs):
 def get_references_dict_from_knowledge_sources(knowledge_sources):
     """
     Extracts references from knowledge sources and returns a dictionary with file names and presigned URLs.
+    Handles both old and new source structures.
     """
     parsed_refs = []
     for source in knowledge_sources:
-        if 'x-amz-bedrock-kb-source-uri' in source['metadata']:
+        # Handle new structure with 'uri' field
+        if 'uri' in source and source['uri'] and source['uri'].startswith('s3://'):
+            parsed_refs.append(source['uri'])
+        # Handle old structure with metadata field
+        elif 'metadata' in source and 'x-amz-bedrock-kb-source-uri' in source['metadata']:
             parsed_refs.append(source['metadata']['x-amz-bedrock-kb-source-uri'])
+        # Handle legacy structure where uri might be at root level
+        elif 'x-amz-bedrock-kb-source-uri' in source:
+            parsed_refs.append(source['x-amz-bedrock-kb-source-uri'])
 
     return get_references_dict(parsed_refs)
 

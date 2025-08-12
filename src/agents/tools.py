@@ -36,8 +36,10 @@ class EngagementInfo(BaseModel):
 
 # Structured KB result with sources for citations
 class KnowledgeResult(BaseModel):
-    text: str
+    """Structured knowledge base retrieval result"""
+    document_chunks: List[str]
     sources: List[Dict[str, Any]] = []
+    query: str = ""
 
 # Context class for sharing data between tools
 class SalesContext:
@@ -125,7 +127,7 @@ async def query_knowledge_tool(
     """
     🔧 Knowledge Base Tool: Product information and training materials
     
-    This tool queries the AWS Bedrock Knowledge Base for:
+    This tool retrieves relevant document chunks from the AWS Bedrock Knowledge Base for:
     - Product features and specifications
     - Clinical studies and evidence
     - Training materials and best practices
@@ -136,13 +138,18 @@ async def query_knowledge_tool(
         query: Question or topic to search for in the knowledge base
         
     Returns:
-        str: Relevant information from the knowledge base
+        KnowledgeResult: Raw document chunks and sources for the main agent to process
     """
     print(f"🔧 Knowledge Base Tool Called: query={query}")
     
-    # Query the knowledge base (answer + sources)
-    kb = knowledge_base.query_with_sources(query)
-    return KnowledgeResult(text=kb.get("text", ""), sources=kb.get("sources", []))
+    # Retrieve document chunks directly (no generation)
+    kb_result = knowledge_base.retrieve_documents(query)
+    
+    return KnowledgeResult(
+        document_chunks=kb_result.get("chunks", []),
+        sources=kb_result.get("sources", []),
+        query=query
+    )
 
 
 @function_tool

@@ -8,7 +8,7 @@ __version__ = "1.0.0"
 from .agents.orchestrator import SalesOrchestrator
 from .sessions.manager import SessionManager, session_manager
 from .models.config import get_available_models, get_model_config
-from .guardrails.security import strict_security_guardrail
+# from .guardrails.security import strict_security_guardrail
 from .knowledge.bedrock_kb import knowledge_base
 
 # Quick setup function for easy initialization

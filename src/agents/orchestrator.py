@@ -16,7 +16,8 @@ from .tools import (
     query_compliance_tool,
     SalesContext
 )
-from ..guardrails.security import strict_security_guardrail
+from ..guardrails.input_guardrails import input_security_guardrail
+from ..guardrails.output_guardrails import output_security_guardrail
 from ..models.config import get_model_config, get_model_settings
 from ..sessions.manager import SessionManager
 from ..knowledge.bedrock_kb import knowledge_base
@@ -66,7 +67,8 @@ class SalesOrchestrator:
         """Create the main orchestrator agent with all tools"""
         
         # Prepare guardrails
-        guardrails = [strict_security_guardrail] if self.enable_guardrails else []
+        input_guardrails = [input_security_guardrail] if self.enable_guardrails else []
+        output_guardrails = [output_security_guardrail] if self.enable_guardrails else []
         
         # Create the agent
         agent = Agent(
@@ -78,7 +80,8 @@ class SalesOrchestrator:
             
             **query_knowledge_tool**: Product information, training materials, clinical data
             • Use for: "Guardant360 features", "Product specifications", "Clinical studies"
-            • Returns: Detailed product information and training resources
+            • Returns: Raw document chunks from knowledge base that you should synthesize into a comprehensive response
+            • IMPORTANT: When this tool returns document chunks, analyze and synthesize them into a coherent, helpful response
             
             ✅ **RESPONSE GUIDELINES:**
             • Provide specific, actionable insights
@@ -107,7 +110,8 @@ class SalesOrchestrator:
                 # query_tableau_tool,
                 # query_compliance_tool
             ],
-            input_guardrails=guardrails,
+            input_guardrails=input_guardrails,
+            output_guardrails=output_guardrails,
             model=self.model_config.model_id,
             model_settings=get_model_settings(self.model_config)
         )
@@ -151,19 +155,34 @@ class SalesOrchestrator:
             # Extract tool usage information
             tools_used = self._extract_tools_used(result)
             
-            # If the knowledge base tool was used, attempt to extract sources from agent result items
+            # Extract sources from knowledge base tool results
             kb_sources = []
-            # Try to extract sources from tool outputs if present
             try:
                 for item in result.new_items:
-                    payload = getattr(item, 'content', None) or getattr(item, 'data', None) or getattr(item, 'value', None)
-                    if isinstance(payload, dict):
-                        sources = payload.get('sources') or []
-                        if sources:
-                            kb_sources.extend(sources)
-            except Exception:
-                pass
-            # Always attempt a direct KB lookup to provide sources when available
+                    # Check if this is a tool result item
+                    if hasattr(item, 'tool_name') and item.tool_name == 'query_knowledge_tool':
+                        # Extract the tool result data
+                        if hasattr(item, 'content'):
+                            tool_result = item.content
+                        elif hasattr(item, 'data'):
+                            tool_result = item.data
+                        else:
+                            continue
+                            
+                        # Handle KnowledgeResult object
+                        if hasattr(tool_result, 'sources'):
+                            sources = tool_result.sources
+                            if sources:
+                                kb_sources.extend(sources)
+                        # Handle dict representation
+                        elif isinstance(tool_result, dict) and 'sources' in tool_result:
+                            sources = tool_result.get('sources', [])
+                            if sources:
+                                kb_sources.extend(sources)
+            except Exception as e:
+                print(f"⚠️ Error extracting sources from tool results: {e}")
+                
+            # Fallback: if no sources extracted from tool results, try direct KB lookup
             if not kb_sources:
                 try:
                     kb = knowledge_base.query_with_sources(query)
@@ -184,10 +203,11 @@ class SalesOrchestrator:
             
         except Exception as e:
             end_time = time.time()
+            output_info = getattr(e, 'output_info', str(e))
             return {
                 "success": False,
                 "response": f"❌ **Error**: {str(e)}",
-                "error": str(e),
+                "error": output_info,
                 "execution_time": end_time - start_time,
                 "model": self.model_config.display_name
             }
@@ -245,11 +265,42 @@ class SalesOrchestrator:
         """Extract which tools were used from the result"""
         tools_used = []
         
-        for item in result.new_items:
-            if hasattr(item, 'tool_name') and item.tool_name:
-                tool_name = item.tool_name
-                if tool_name not in tools_used:
+        try:
+            for item in result.new_items:
+                tool_name = None
+                
+                # Try different ways to extract tool name
+                if hasattr(item, 'tool_name') and item.tool_name:
+                    tool_name = item.tool_name
+                elif hasattr(item, 'function_name') and item.function_name:
+                    tool_name = item.function_name
+                elif hasattr(item, 'name') and item.name:
+                    tool_name = item.name
+                elif hasattr(item, 'type') and 'tool' in str(item.type).lower():
+                    # Try to extract from item content or data
+                    if hasattr(item, 'content'):
+                        content = str(item.content)
+                        if 'query_knowledge_tool' in content:
+                            tool_name = 'query_knowledge_tool'
+                        elif 'query_salesforce_tool' in content:
+                            tool_name = 'query_salesforce_tool'
+                        elif 'query_veeva_tool' in content:
+                            tool_name = 'query_veeva_tool'
+                        elif 'query_tableau_tool' in content:
+                            tool_name = 'query_tableau_tool'
+                        elif 'query_compliance_tool' in content:
+                            tool_name = 'query_compliance_tool'
+                
+                # Debug logging (can be enabled if needed)
+                # print(f"🔍 Item type: {type(item)}, tool_name: {tool_name}")
+                # if hasattr(item, '__dict__'):
+                #     print(f"🔍 Item attributes: {list(item.__dict__.keys())}")
+                
+                if tool_name and tool_name not in tools_used:
                     tools_used.append(tool_name)
+                    
+        except Exception as e:
+            print(f"⚠️ Error extracting tools used: {e}")
         
         return tools_used
     

@@ -70,18 +70,18 @@ class BedrockKnowledgeBase:
         if not self.client:
             raise Exception("Bedrock client not initialized")
         
-        test_response = self.client.retrieve_and_generate(
-            input={'text': "What is sales training?"},
-            retrieveAndGenerateConfiguration={
-                'type': 'KNOWLEDGE_BASE',
-                'knowledgeBaseConfiguration': {
-                    'knowledgeBaseId': self.knowledge_base_id,
-                    'modelArn': self.model_arn,
+        # Use retrieve method for testing instead of retrieve_and_generate
+        test_response = self.client.retrieve(
+            knowledgeBaseId=self.knowledge_base_id,
+            retrievalQuery={'text': "What is sales training?"},
+            retrievalConfiguration={
+                'vectorSearchConfiguration': {
+                    'numberOfResults': 1
                 }
             }
         )
         
-        if not test_response.get('output', {}).get('text'):
+        if not test_response.get('retrievalResults'):
             raise Exception("Invalid response from Knowledge Base")
         
         print("🧪 Knowledge Base connection test successful")
@@ -99,41 +99,112 @@ class BedrockKnowledgeBase:
         if not self.available or not self.client:
             return self._get_mock_response(query)
 
-    def query_with_sources(self, query: str) -> Dict[str, Any]:
+    def retrieve_documents(self, query: str, max_results: int = 10) -> Dict[str, Any]:
         """
-        Query the Knowledge Base and return both answer text and source documents when available.
-
-        Returns a dict: { 'text': str, 'sources': List[Dict[str, Any]] }
+        Retrieve relevant document chunks from the Knowledge Base without generation.
+        
+        Args:
+            query: The question or topic to search for
+            max_results: Maximum number of document chunks to retrieve
+            
+        Returns:
+            Dict containing retrieved document chunks and sources
         """
         # Fallback to mock if KB is unavailable
         if not self.available or not self.client:
             return {
-                "text": self._get_mock_response(query),
+                "chunks": [self._get_mock_response(query)],
                 "sources": self._get_mock_sources(query)
             }
 
         try:
-            response = self.client.retrieve_and_generate(
-                input={'text': query},
-                retrieveAndGenerateConfiguration={
-                    'type': 'KNOWLEDGE_BASE',
-                    'knowledgeBaseConfiguration': {
-                        'knowledgeBaseId': self.knowledge_base_id,
-                        'modelArn': self.model_arn,
+            response = self.client.retrieve(
+                knowledgeBaseId=self.knowledge_base_id,
+                retrievalQuery={'text': query},
+                retrievalConfiguration={
+                    'vectorSearchConfiguration': {
+                        'numberOfResults': max_results
                     }
                 }
             )
 
-            text = response.get('output', {}).get('text', '')
-            sources = self._extract_sources(response)
-            return {"text": text, "sources": sources}
+            # Extract document chunks and sources from retrieve response
+            chunks = []
+            sources = []
+            
+            retrieval_results = response.get('retrievalResults', [])
+            for result in retrieval_results:
+                # Extract content text
+                content = result.get('content', {})
+                if isinstance(content, dict):
+                    text = content.get('text', '')
+                else:
+                    text = str(content)
+                
+                if text:
+                    chunks.append(text)
+                
+                # Extract source information
+                source = {}
+                location = result.get('location', {})
+                
+                # Handle different location types
+                if 's3Location' in location:
+                    s3 = location['s3Location']
+                    bucket = s3.get('bucket')
+                    key = s3.get('key')
+                    source['uri'] = f"s3://{bucket}/{key}" if bucket and key else None
+                elif 'url' in location:
+                    source['uri'] = location.get('url')
+                
+                # Add snippet and metadata
+                source['snippet'] = text[:200] + "..." if len(text) > 200 else text
+                source['title'] = result.get('metadata', {}).get('title', 'Knowledge Base Document')
+                
+                # Add score if available
+                score = result.get('score')
+                if score is not None:
+                    source['relevance_score'] = score
+                
+                # Add metadata
+                metadata = result.get('metadata', {})
+                if metadata:
+                    source['metadata'] = metadata
+                
+                # Clean Nones and add if not empty
+                source = {k: v for k, v in source.items() if v is not None}
+                if source:
+                    sources.append(source)
+
+            return {
+                "chunks": chunks,
+                "sources": sources
+            }
 
         except Exception as e:
-            print(f"❌ Knowledge Base query_with_sources failed: {e}")
+            print(f"❌ Knowledge Base retrieve_documents failed: {e}")
             return {
-                "text": self._get_mock_response(query),
+                "chunks": [self._get_mock_response(query)],
                 "sources": self._get_mock_sources(query)
             }
+
+    def query_with_sources(self, query: str) -> Dict[str, Any]:
+        """
+        Legacy method that now uses retrieve_documents instead of retrieve_and_generate.
+        Returns document chunks joined as text for backward compatibility.
+
+        Returns a dict: { 'text': str, 'sources': List[Dict[str, Any]] }
+        """
+        result = self.retrieve_documents(query)
+        
+        # Join chunks into a single text response for compatibility
+        chunks = result.get('chunks', [])
+        combined_text = "\n\n".join(chunks) if chunks else ""
+        
+        return {
+            "text": combined_text,
+            "sources": result.get('sources', [])
+        }
 
     def _extract_sources(self, response: Dict[str, Any]):
         """Best-effort extraction of source documents from Bedrock RnG response."""
