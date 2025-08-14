@@ -42,8 +42,8 @@ def create_app() -> Flask:
 
     orchestrator = SalesOrchestrator(
         model_name=MODEL_NAME,
-        enable_guardrails=False,
-        enable_tracing=False,
+        enable_guardrails=True,
+        enable_tracing=True,
     )
 
     @app.get("/health")
@@ -60,19 +60,6 @@ def create_app() -> Flask:
 
     @app.post("/query")
     def query():
-        ## get post query parameters
-        # print('-----query endpoint called-----')
-        # print('-----request headers:', request.headers)
-        # print('-----request args:', request.args)
-        # print('-----request form:', request.form)
-        # print('-----request json:', request.json)
-        # print('-----request data:', request.data)
-        # print('-----request content type:', request.content_type)
-
-        # print('complete request:', request)
-        # print(' request data:', request.get_data())
-        # data: Dict[str, Any] = request.get_json(silent=True) or {}
-        ## either data is in request.args or request.json
         data: Dict[str, Any] = request.args.to_dict() or request.json or {}
         print('-----data:', data)
         user_query: str = (data.get("question") or data.get("prompt") or "").strip()
@@ -121,7 +108,12 @@ def create_app() -> Flask:
                 "references_dict": references_dict
             }
             if not result.get("success"):
-                payload["error"] = result.get("error") or result.get("response")
+                # Check if this was a guardrail violation for better error messaging
+                if result.get("guardrail_triggered"):
+                    payload["error"] = "Content guardrail triggered - question outside business scope"
+                    payload["error_type"] = "guardrail_violation"
+                else:
+                    payload["error"] = result.get("error") or result.get("response")
 
             return jsonify(payload), status_code
 

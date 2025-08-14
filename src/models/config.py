@@ -47,7 +47,7 @@ def get_available_models() -> Dict[str, ModelConfig]:
             model_id="gpt-4o-mini",
             display_name="🤖 OpenAI GPT-4o Mini",
             description="Faster, more cost-effective GPT-4o variant",
-            temperature=0.2,
+            temperature=0.3,
             max_tokens=1500
         ),
         
