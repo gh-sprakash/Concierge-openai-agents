@@ -47,7 +47,7 @@ def get_available_models() -> Dict[str, ModelConfig]:
             model_id="gpt-4o-mini",
             display_name="🤖 OpenAI GPT-4o Mini",
             description="Faster, more cost-effective GPT-4o variant",
-            temperature=0.3,
+            temperature=0.1,
             max_tokens=1500
         ),
         
@@ -57,6 +57,26 @@ def get_available_models() -> Dict[str, ModelConfig]:
             model_id="gpt-4-turbo",
             display_name="🤖 OpenAI GPT-4 Turbo",
             description="High performance GPT-4 with faster response times",
+            temperature=0.2,
+            max_tokens=1500
+        ),
+        
+        "openai-gpt-5-nano": ModelConfig(
+            name="openai-gpt-5-nano",
+            provider=ModelProvider.OPENAI,
+            model_id="gpt-5-nano-2025-08-07",
+            display_name="🤖 OpenAI GPT-5 Nano",
+            description="High performance GPT-5 Nano model",
+            # temperature=0.2,
+            max_tokens=1500
+        ),
+        
+        "nova-lite": ModelConfig(
+            name="nova-lite",
+            provider=ModelProvider.BEDROCK,
+            model_id="us.amazon.nova-lite-v1:0",
+            display_name="🤖 Amazon Nova Lite",
+            description="High performance Amazon Nova Lite model",
             temperature=0.2,
             max_tokens=1500
         ),

@@ -42,8 +42,8 @@ def create_app() -> Flask:
 
     orchestrator = SalesOrchestrator(
         model_name=MODEL_NAME,
-        enable_guardrails=True,
-        enable_tracing=True,
+        enable_guardrails=False,
+        enable_tracing=False,
     )
 
     @app.get("/health")
