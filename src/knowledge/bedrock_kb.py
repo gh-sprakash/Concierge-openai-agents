@@ -99,7 +99,7 @@ class BedrockKnowledgeBase:
         if not self.available or not self.client:
             return self._get_mock_response(query)
 
-    def retrieve_documents(self, query: str, max_results: int = 10) -> Dict[str, Any]:
+    def retrieve_documents(self, query: str, max_results: int = 5) -> Dict[str, Any]:
         """
         Retrieve relevant document chunks from the Knowledge Base without generation.
         

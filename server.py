@@ -38,7 +38,8 @@ def create_app() -> Flask:
 
     # Fixed configuration per requirements
     MODEL_NAME = "openai-gpt-4o-mini"  # use GPT-4o
-    SESSION_TYPE = "persistent"   # persistent memory
+    SESSION_TYPE = "inMemory"   # in-memory session
+    # SESSION_TYPE = "persistent"   # persistent memory
 
     orchestrator = SalesOrchestrator(
         model_name=MODEL_NAME,

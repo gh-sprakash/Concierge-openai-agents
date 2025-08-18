@@ -175,7 +175,7 @@ class SalesOrchestrator:
                 self.agent,
                 query,
                 context=context,
-                session=session
+                # session=session
             )
             
             end_time = time.time()

@@ -1,0 +1,671 @@
+# Langfuse Tracing Implementation Plan for OpenAI Agents SDK
+
+## Executive Summary
+
+This document outlines the comprehensive implementation plan for integrating Langfuse tracing with the Concierge OpenAI Agents SDK system. The plan prioritizes minimal development overhead while maximizing observability, monitoring, and evaluation capabilities.
+
+## Current System Analysis
+
+### Architecture Overview
+- **Main Orchestrator**: `SalesOrchestrator` class managing single agent with multiple business tools
+- **Agent Framework**: OpenAI Agents SDK v0.2.4 with LiteLLM model abstraction
+- **Tools**: Function-decorated tools for Salesforce, Veeva, Knowledge Base, Tableau, Compliance
+- **Session Management**: SQLite-based persistent and temporary sessions
+- **Models**: Support for OpenAI GPT-4o/4o-mini, Claude 3.5 Sonnet/Haiku, Nova Lite
+- **API**: Flask-based REST API with CORS support
+- **Current Tracing**: Disabled (`OPENAI_AGENTS_DISABLE_TRACING = "1"`)
+
+### Key Integration Points
+1. **Agent Creation** (`orchestrator.py` line 95-146)
+2. **Agent Execution** (`process_query` and `stream_query` methods)
+3. **Tool Invocations** (All `@function_tool` decorated functions)
+4. **Session Management** (SQLite session storage)
+5. **API Endpoints** (`/query` endpoint in `server.py`)
+
+## Implementation Strategy
+
+### Phase 1: Core Tracing Setup (Minimal Impact)
+
+#### 1.1 Dependencies Installation
+```bash
+# Add to requirements.txt
+langfuse>=2.0.0
+nest_asyncio>=1.6.0
+pydantic-ai[logfire]>=0.0.9
+```
+
+#### 1.2 Environment Configuration
+```python
+# Add to .env file
+LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
+LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
+LANGFUSE_HOST=https://cloud.langfuse.com
+LANGFUSE_ENABLED=true
+LANGFUSE_TRACE_SENSITIVE_DATA=false
+```
+
+#### 1.3 Core Integration Module
+Create `src/tracing/langfuse_integration.py`:
+
+```python
+"""
+Langfuse Tracing Integration for OpenAI Agents SDK
+Provides centralized tracing configuration with minimal overhead
+"""
+
+import os
+import base64
+import logfire
+from typing import Optional, Dict, Any
+from contextlib import contextmanager
+from langfuse import observe, get_client
+from agents import get_global_trace_provider
+
+
+class LangfuseTracer:
+    """Centralized Langfuse tracing manager"""
+    
+    def __init__(self, enabled: bool = None):
+        self.enabled = enabled if enabled is not None else os.getenv("LANGFUSE_ENABLED", "false").lower() == "true"
+        self.client = None
+        
+        if self.enabled:
+            self._configure_environment()
+            self._initialize_tracing()
+    
+    def _configure_environment(self):
+        """Configure OpenTelemetry environment for Langfuse"""
+        
+        # Validate required environment variables
+        required_vars = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_HOST"]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {missing_vars}")
+        
+        # Build Basic Auth header
+        langfuse_auth = base64.b64encode(
+            f"{os.getenv('LANGFUSE_PUBLIC_KEY')}:{os.getenv('LANGFUSE_SECRET_KEY')}".encode()
+        ).decode()
+        
+        # Configure OpenTelemetry endpoint & headers
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = os.getenv("LANGFUSE_HOST") + "/api/public/otel"
+        os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
+        
+        # Enable tracing in OpenAI Agents SDK
+        if "OPENAI_AGENTS_DISABLE_TRACING" in os.environ:
+            del os.environ["OPENAI_AGENTS_DISABLE_TRACING"]
+    
+    def _initialize_tracing(self):
+        """Initialize logfire instrumentation"""
+        try:
+            # Configure logfire for OpenTelemetry export
+            logfire.configure(
+                service_name='concierge-sales-assistant',
+                service_version='1.0.0',
+                send_to_logfire=False,  # Send to Langfuse instead
+                console=False,  # Disable console logging for production
+            )
+            
+            # Instrument OpenAI Agents SDK
+            logfire.instrument_openai_agents()
+            
+            # Initialize Langfuse client for custom instrumentation
+            self.client = get_client()
+            
+            print("✅ Langfuse tracing initialized successfully")
+            
+        except Exception as e:
+            print(f"⚠️ Failed to initialize Langfuse tracing: {e}")
+            self.enabled = False
+    
+    @contextmanager
+    def trace_session(self, session_name: str, user_id: str = None, metadata: Dict[str, Any] = None):
+        """Context manager for tracing user sessions"""
+        if not self.enabled:
+            yield None
+            return
+        
+        trace_metadata = {
+            "session_name": session_name,
+            "user_id": user_id,
+            "system": "concierge-sales-assistant",
+            **(metadata or {})
+        }
+        
+        try:
+            with self.client.trace(
+                name=session_name,
+                user_id=user_id,
+                metadata=trace_metadata
+            ) as trace:
+                yield trace
+        except Exception as e:
+            print(f"⚠️ Tracing error: {e}")
+            yield None
+    
+    def add_query_metadata(self, query_id: str, user_context: Dict[str, Any] = None, tools_used: list = None):
+        """Add metadata to current trace"""
+        if not self.enabled or not self.client:
+            return
+        
+        try:
+            self.client.update_current_trace(
+                tags=["sales-query", "openai-agents"],
+                metadata={
+                    "query_id": query_id,
+                    "user_context": user_context or {},
+                    "tools_used": tools_used or [],
+                    "version": "1.0.0"
+                }
+            )
+        except Exception as e:
+            print(f"⚠️ Failed to add query metadata: {e}")
+    
+    def flush_traces(self):
+        """Ensure all traces are exported (for short-lived processes)"""
+        if self.enabled:
+            try:
+                get_global_trace_provider().force_flush()
+            except Exception as e:
+                print(f"⚠️ Failed to flush traces: {e}")
+
+
+# Global tracer instance
+tracer = LangfuseTracer()
+
+# Convenience decorators and functions
+@observe(capture_input=True, capture_output=True)
+def trace_function(func):
+    """Decorator to trace individual functions"""
+    return func
+
+def observe_tool_call(tool_name: str):
+    """Decorator for tracing tool calls with minimal overhead"""
+    def decorator(func):
+        if not tracer.enabled:
+            return func
+        
+        @observe(name=f"tool_{tool_name}")
+        async def wrapper(*args, **kwargs):
+            result = await func(*args, **kwargs)
+            return result
+        return wrapper
+    return decorator
+```
+
+### Phase 2: Agent Integration (Low Impact)
+
+#### 2.1 Orchestrator Modifications
+Modify `src/agents/orchestrator.py`:
+
+```python
+# Add import at top
+from ..tracing.langfuse_integration import tracer
+
+class SalesOrchestrator:
+    def __init__(
+        self, 
+        model_name: str = "openai-gpt-4o-mini",
+        enable_guardrails: bool = True,
+        enable_tracing: bool = None  # Auto-detect from environment
+    ):
+        # Use environment-based tracing if not explicitly set
+        self.enable_tracing = enable_tracing if enable_tracing is not None else tracer.enabled
+        
+        # Rest of initialization remains the same...
+
+    async def process_query(
+        self,
+        query: str,
+        user_context: Optional[Dict[str, Any]] = None,
+        session = None
+    ) -> Dict[str, Any]:
+        """Enhanced with Langfuse tracing"""
+        import time
+        import uuid
+        
+        start_time = time.time()
+        query_id = str(uuid.uuid4())
+        
+        # Create tracing context for the entire query
+        with tracer.trace_session(
+            session_name=f"sales_query_{query_id[:8]}",
+            user_id=user_context.get("name", "anonymous") if user_context else "anonymous",
+            metadata={
+                "query": query,
+                "model": self.model_name,
+                "guardrails_enabled": self.enable_guardrails
+            }
+        ) as trace:
+            
+            try:
+                # Create sales context
+                context = self._create_sales_context(user_context)
+                
+                # Run the agent with tracing
+                result = await Runner.run(
+                    self.agent,
+                    query,
+                    context=context,
+                    session=session
+                )
+                
+                end_time = time.time()
+                
+                # Extract tool usage information
+                tools_used = self._extract_tools_used(result)
+                
+                # Add metadata to trace
+                tracer.add_query_metadata(
+                    query_id=query_id,
+                    user_context=user_context,
+                    tools_used=tools_used
+                )
+                
+                # Rest of processing remains the same...
+                
+                return {
+                    "success": True,
+                    "response": formatted_response,
+                    "tools_used": tools_used,
+                    "execution_time": end_time - start_time,
+                    "model": self.model_config.display_name,
+                    "session_used": session is not None,
+                    "knowledge_sources": kb_sources,
+                    "query_id": query_id,  # Add query ID for tracing correlation
+                    "result_object": result
+                }
+                
+            except Exception as e:
+                # Error handling with tracing
+                end_time = time.time()
+                
+                if trace:
+                    tracer.client.update_current_trace(
+                        tags=["error", "sales-query"],
+                        metadata={"error": str(e), "error_type": type(e).__name__}
+                    )
+                
+                # Rest of error handling remains the same...
+```
+
+#### 2.2 Tool Instrumentation
+Modify `src/agents/tools.py` to add tracing to critical tools:
+
+```python
+# Add import at top
+from ..tracing.langfuse_integration import observe_tool_call
+
+# Apply decorator to key tools
+@function_tool
+@observe_tool_call("knowledge_base")
+async def query_knowledge_tool(
+    ctx: RunContextWrapper[SalesContext],
+    query: str
+) -> KnowledgeResult:
+    """Enhanced with tracing"""
+    print(f"INFO: Knowledge Base Tool Called: query={query}")
+    
+    # Retrieve document chunks directly (no generation)
+    kb_result = knowledge_base.retrieve_documents(query)
+    
+    return KnowledgeResult(
+        document_chunks=kb_result.get("chunks", []),
+        sources=kb_result.get("sources", []),
+        query=query
+    )
+
+# Similar decorators for other critical tools...
+```
+
+### Phase 3: Advanced Features (Medium Impact)
+
+#### 3.1 Evaluation Framework
+Create `src/evaluation/langfuse_evaluator.py`:
+
+```python
+"""
+Langfuse-based evaluation framework for agent responses
+"""
+
+from langfuse import observe, get_client
+from typing import Dict, Any, List
+import asyncio
+
+
+class AgentEvaluator:
+    """Evaluates agent responses using Langfuse scoring"""
+    
+    def __init__(self):
+        self.client = get_client()
+    
+    @observe(name="response_quality_evaluation")
+    async def evaluate_response_quality(
+        self, 
+        query: str, 
+        response: str, 
+        tools_used: List[str],
+        trace_id: str
+    ) -> Dict[str, Any]:
+        """Evaluate response quality using LLM-as-a-judge"""
+        
+        evaluation_prompt = f"""
+        Evaluate this sales assistant response on a scale of 1-10:
+        
+        Query: {query}
+        Response: {response}
+        Tools Used: {', '.join(tools_used)}
+        
+        Rate the response on:
+        1. Accuracy (1-10)
+        2. Completeness (1-10)  
+        3. Helpfulness (1-10)
+        4. Professional tone (1-10)
+        
+        Provide scores and brief reasoning.
+        """
+        
+        # Use Claude or GPT for evaluation
+        from agents import Agent, Runner
+        
+        evaluator_agent = Agent(
+            name="Response Evaluator",
+            instructions="You are an expert evaluator of sales assistant responses. Provide objective, constructive feedback.",
+            model="claude-3-5-sonnet"
+        )
+        
+        eval_result = await Runner.run(evaluator_agent, evaluation_prompt)
+        
+        # Parse scores and add to Langfuse
+        # This would parse the LLM response and create scores
+        scores = self._parse_evaluation_scores(eval_result.final_output)
+        
+        for metric, score in scores.items():
+            self.client.create_score(
+                name=f"response_{metric}",
+                value=score,
+                trace_id=trace_id,
+                comment=f"LLM evaluation: {metric}"
+            )
+        
+        return scores
+    
+    def _parse_evaluation_scores(self, evaluation_text: str) -> Dict[str, float]:
+        """Parse evaluation scores from LLM response"""
+        # Implementation would parse the structured evaluation
+        # For now, return mock scores
+        return {
+            "accuracy": 8.5,
+            "completeness": 7.8,
+            "helpfulness": 9.1,
+            "professional_tone": 8.9
+        }
+```
+
+#### 3.2 User Feedback Integration
+Enhance API endpoint in `server.py`:
+
+```python
+@app.post("/feedback")
+def submit_feedback():
+    """Submit user feedback for traces"""
+    data = request.json or {}
+    query_id = data.get("query_id")
+    rating = data.get("rating")  # 1-5 stars
+    comment = data.get("comment", "")
+    
+    if not query_id or rating is None:
+        return jsonify({"error": "Missing query_id or rating"}), 400
+    
+    try:
+        if tracer.enabled and tracer.client:
+            tracer.client.create_score(
+                name="user_rating",
+                value=rating,
+                trace_id=query_id,
+                comment=comment
+            )
+        
+        return jsonify({"success": True, "message": "Feedback recorded"})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+```
+
+### Phase 4: Production Optimization (High Impact)
+
+#### 4.1 Performance Configuration
+Create `src/tracing/performance_config.py`:
+
+```python
+"""
+Production-optimized Langfuse configuration
+"""
+
+import os
+from typing import Dict, Any
+
+class ProductionTracingConfig:
+    """Optimized tracing configuration for production environments"""
+    
+    # Sampling rates for different environments
+    SAMPLING_RATES = {
+        "development": 1.0,  # Trace everything
+        "staging": 0.5,      # Trace 50%
+        "production": 0.1,   # Trace 10%
+    }
+    
+    # Feature flags for different tracing capabilities
+    FEATURE_FLAGS = {
+        "trace_tool_inputs": True,
+        "trace_tool_outputs": True,
+        "trace_user_queries": True,
+        "trace_model_responses": True,
+        "trace_session_data": False,  # Disable for privacy
+        "enable_evaluations": False,  # Disable expensive evaluations in prod
+    }
+    
+    @classmethod
+    def get_config(cls, environment: str = None) -> Dict[str, Any]:
+        """Get optimized configuration for environment"""
+        env = environment or os.getenv("ENVIRONMENT", "development")
+        
+        return {
+            "sampling_rate": cls.SAMPLING_RATES.get(env, 0.1),
+            "features": cls.FEATURE_FLAGS.copy(),
+            "batch_size": 100,  # Batch traces for efficiency
+            "flush_interval": 30,  # Flush every 30 seconds
+            "max_queue_size": 1000,
+            "timeout": 10,  # 10 second timeout for trace exports
+        }
+```
+
+#### 4.2 Async Trace Processing
+```python
+"""
+Asynchronous trace processing to minimize latency impact
+"""
+
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import queue
+
+class AsyncTraceProcessor:
+    """Process traces asynchronously to minimize request latency"""
+    
+    def __init__(self, max_workers: int = 3):
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.trace_queue = queue.Queue(maxsize=1000)
+        self.running = True
+        
+        # Start background processor
+        asyncio.create_task(self._process_traces())
+    
+    async def _process_traces(self):
+        """Background task to process queued traces"""
+        while self.running:
+            try:
+                # Process traces in batches
+                batch = []
+                for _ in range(10):  # Process up to 10 traces at once
+                    try:
+                        trace_data = self.trace_queue.get_nowait()
+                        batch.append(trace_data)
+                    except queue.Empty:
+                        break
+                
+                if batch:
+                    await self._send_batch_to_langfuse(batch)
+                
+                await asyncio.sleep(1)  # Small delay between batches
+                
+            except Exception as e:
+                print(f"⚠️ Error processing traces: {e}")
+    
+    async def _send_batch_to_langfuse(self, batch):
+        """Send batch of traces to Langfuse"""
+        # Implementation would batch send traces
+        pass
+    
+    def queue_trace(self, trace_data):
+        """Queue a trace for async processing"""
+        try:
+            self.trace_queue.put_nowait(trace_data)
+        except queue.Full:
+            print("⚠️ Trace queue full, dropping trace")
+```
+
+## Deployment Strategy
+
+### Development Environment
+```bash
+# Enable full tracing
+export LANGFUSE_ENABLED=true
+export ENVIRONMENT=development
+export LANGFUSE_TRACE_SENSITIVE_DATA=false
+```
+
+### Staging Environment  
+```bash
+# Enable reduced tracing
+export LANGFUSE_ENABLED=true
+export ENVIRONMENT=staging
+export LANGFUSE_TRACE_SENSITIVE_DATA=false
+```
+
+### Production Environment
+```bash
+# Enable minimal tracing
+export LANGFUSE_ENABLED=true
+export ENVIRONMENT=production
+export LANGFUSE_TRACE_SENSITIVE_DATA=false
+export LANGFUSE_BATCH_SIZE=100
+export LANGFUSE_FLUSH_INTERVAL=30
+```
+
+## Monitoring and Alerting
+
+### Key Metrics to Track
+1. **Response Quality Scores**: Average rating per day/week
+2. **Tool Usage Patterns**: Which tools are used most frequently
+3. **Error Rates**: Failed queries and error types
+4. **Performance Metrics**: Response times and token usage
+5. **User Satisfaction**: Feedback ratings and comments
+
+### Langfuse Dashboard Setup
+1. **Traces View**: Monitor real-time agent interactions
+2. **Analytics**: Track usage patterns and performance trends
+3. **Evaluations**: Set up automated quality assessments
+4. **Datasets**: Create test datasets for regression testing
+5. **Playground**: Test prompts and model configurations
+
+### Alerting Rules
+```python
+# Set up alerts for:
+- Average response quality < 7.0
+- Error rate > 5%
+- Response time > 10 seconds
+- Tool failure rate > 2%
+- User satisfaction < 4.0/5.0
+```
+
+## Security and Privacy
+
+### Data Protection
+- **Sensitive Data**: Use `trace_include_sensitive_data=False`
+- **PII Filtering**: Implement regex filters for phone numbers, emails, SSNs
+- **User Consent**: Only trace with explicit user consent
+- **Data Retention**: Configure automatic data deletion after 90 days
+
+### Compliance Considerations
+- **GDPR**: Implement right to deletion for user traces
+- **HIPAA**: Ensure no healthcare data is traced
+- **SOC2**: Use Langfuse Cloud EU for data residency requirements
+
+## Cost Optimization
+
+### Langfuse Pricing Strategy
+- **Development**: Use free tier (up to 50k traces/month)
+- **Production**: Team plan ($59/month) for up to 1M traces
+- **Enterprise**: Custom pricing for >1M traces/month
+
+### Cost Control Measures
+1. **Sampling**: Use 10% sampling in production
+2. **Selective Tracing**: Only trace critical paths
+3. **Batch Processing**: Reduce API calls through batching
+4. **Local Development**: Use local Langfuse instance for dev
+
+## Success Metrics
+
+### Implementation Goals
+- ✅ **Zero Downtime**: No service interruptions during rollout
+- ✅ **<5ms Latency**: Minimal impact on response times  
+- ✅ **100% Coverage**: All agent interactions traced
+- ✅ **Real-time Monitoring**: Dashboard available within 24 hours
+- ✅ **Automated Evaluation**: Quality scores generated automatically
+
+### Business Value
+- **Reduced Debugging Time**: 50% faster issue resolution
+- **Improved Response Quality**: 15% increase in user satisfaction
+- **Better Product Insights**: Data-driven feature development
+- **Enhanced Reliability**: Proactive issue detection and resolution
+
+## Implementation Timeline
+
+### Week 1: Foundation
+- [ ] Install dependencies and configure environment
+- [ ] Implement core tracing integration
+- [ ] Test in development environment
+
+### Week 2: Basic Integration
+- [ ] Integrate with orchestrator and tools
+- [ ] Deploy to staging environment
+- [ ] Validate trace data quality
+
+### Week 3: Advanced Features
+- [ ] Implement evaluation framework
+- [ ] Add user feedback collection
+- [ ] Create monitoring dashboards
+
+### Week 4: Production Readiness
+- [ ] Performance optimization
+- [ ] Security review and compliance
+- [ ] Production deployment
+
+### Week 5: Monitoring & Optimization
+- [ ] Set up alerting rules
+- [ ] Analyze performance impact
+- [ ] Optimize based on real usage
+
+## Conclusion
+
+This implementation plan provides a structured, low-risk approach to integrating Langfuse tracing with minimal development overhead. The phased approach ensures that critical functionality remains stable while gradually adding comprehensive observability capabilities.
+
+The key benefits include:
+- **Immediate Value**: Basic tracing operational within days
+- **Minimal Risk**: Gradual rollout with fallback options
+- **High ROI**: Significant improvement in debugging and optimization capabilities
+- **Future-Proof**: Foundation for advanced AI monitoring and evaluation
+
+By following this plan, the Concierge system will gain world-class observability while maintaining its current performance and reliability standards.

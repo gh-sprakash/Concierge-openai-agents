@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+Always read the documentation before writing code.
+Always use the latest version of the documentation.
+Always use the latest version of the code.
+Always use the latest version of the tools.
+Always use the latest version of the libraries.
+Always use the latest version of the frameworks.
+Always use source ~/.agents/bin/activate to activate the agents environment before testing the code.
+Always export the environment variables from .env file before running the code.
