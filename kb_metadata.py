@@ -383,22 +383,22 @@ async def process_file_metadata(
         return default_metadata
 
 
-# Example usage
-if __name__ == "__main__":
-    import asyncio
+# # Example usage
+# if __name__ == "__main__":
+#     import asyncio
     
-    async def example():
-        # Setup logger to only print errors
-        logger = setup_logger("langchain_metadata_processor", logging.INFO)
+#     async def example():
+#         # Setup logger to only print errors
+#         logger = setup_logger("langchain_metadata_processor", logging.INFO)
         
-        metadata = await process_file_metadata(
-            bucket_name="consiergeai-salesrep-training",
-            object_key="salesrep/[GUAR514] Tumor One-Pagers - Breast R8.00 CMYK.pdf",
-            existing_metadata={
-                "department": "Sales & Marketing"
-            },
-            logger=logger
-        )
-        print("Final processed metadata:", json.dumps(metadata, indent=2))
+#         metadata = await process_file_metadata(
+#             bucket_name="consiergeai-salesrep-training",
+#             object_key="salesrep/[GUAR514] Tumor One-Pagers - Breast R8.00 CMYK.pdf",
+#             existing_metadata={
+#                 "department": "Sales & Marketing"
+#             },
+#             logger=logger
+#         )
+#         print("Final processed metadata:", json.dumps(metadata, indent=2))
     
-    asyncio.run(example())
+#     asyncio.run(example())
