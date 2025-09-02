@@ -1,0 +1,64 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python bytecode and caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.venv-1/
+venv/
+ENV/
+
+# Packaging / build artifacts
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Type checkers / linters
+.mypy_cache/
+.pytype/
+.pyre/
+.ruff_cache/
+
+# Tests / coverage / caches
+.pytest_cache/
+pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Databases and runtime state
+sessions/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml
+
+# IDE / OS specific
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+Thumbs.db
