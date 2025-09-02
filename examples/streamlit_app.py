@@ -2,6 +2,10 @@
 Sales Assistant Streamlit Application
 Production-ready web interface showcasing all system capabilities
 """
+try:
+    import eval_type_backport
+except ImportError:
+    pass
 
 import streamlit as st
 import asyncio
@@ -168,7 +172,7 @@ class SalesAssistantApp:
                     asyncio.run(session_manager.clear_session(st.session_state.user_id, session_type))
                     st.session_state.chat_history = []
                     st.success("✅ Cleared!")
-                    st.experimental_rerun()
+                    st.rerun()
             
             with col2:
                 if st.button("📊 Reset Metrics"):
@@ -177,8 +181,8 @@ class SalesAssistantApp:
                         'guardrail_blocks': 0, 'total_time': 0.0
                     }
                     st.success("✅ Reset!")
-                    st.experimental_rerun()
-            
+                    st.rerun()
+
             # Metrics display
             self.render_metrics()
             
@@ -454,8 +458,8 @@ class SalesAssistantApp:
                     })
         
         # Rerun to update the interface
-        st.experimental_rerun()
-    
+        st.rerun()
+
     def run(self):
         """Main application runner"""
         # Render header
