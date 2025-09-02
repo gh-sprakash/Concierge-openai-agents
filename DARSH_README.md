@@ -4,7 +4,6 @@ A concise, presentation-ready brief with targeted suggestions and a quick summar
 
 ## 1) Technical Suggestions (Architecture & Response Time)
 
-Below are the three priorities. Each includes high-level actions and file tags so you can present without digging into code.
 
 - __1) Parallel Tool Orchestration + Progressive Streaming__
   - __Goal__: Reduce response time for multi-source queries by running tools at the same time and showing results as they arrive.
